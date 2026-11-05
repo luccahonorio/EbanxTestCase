@@ -5,9 +5,9 @@ import com.company.app.repository.InMemoryAccountRepository;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.util.NoSuchElementException;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class AccountServiceTest {
     @Test
@@ -76,6 +76,63 @@ class AccountServiceTest {
         assertTrue(account.isEmpty());
 
         // Verify that the account was not created
+        assertTrue(repository.findById("999").isEmpty());
+    }
+
+    @Test
+    void shouldWithdrawWithSuccess() {
+        // Arrange
+        var repository = new InMemoryAccountRepository();
+        var service = new AccountService(repository);
+        service.deposit("123", new BigDecimal("10.00"));
+
+        // Act
+        Account account = service.withdraw("123", new BigDecimal("5.00"));
+
+        // Assert
+        assertEquals("123", account.getId());
+        assertEquals(0, new BigDecimal("5.00").compareTo(account.getBalance()));
+
+        // Validate actual repository state
+        Account storedAccount = repository.findById("123").orElseThrow();
+        assertEquals(0, new BigDecimal("5.00").compareTo(storedAccount.getBalance()));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenWithdrawingMoreThanBalance() {
+        // Arrange
+        var repository = new InMemoryAccountRepository();
+        var service = new AccountService(repository);
+        service.deposit("123", new BigDecimal("10.00"));
+
+        // Act
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> service.withdraw("123", new BigDecimal("15.00"))
+        );
+
+        // Assert
+        assertEquals("Insufficient funds", exception.getMessage());
+
+        //validate account balance remains unchanged
+        Account account=repository.findById("123").orElseThrow();
+        assertEquals(0, new BigDecimal("10.00").compareTo(account.getBalance()));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenWithdrawingFromNonExistingAccount() {
+        // Arrange
+        var repository = new InMemoryAccountRepository();
+        var service = new AccountService(repository);
+
+        // Act
+        NoSuchElementException exception = assertThrows(
+                NoSuchElementException.class,
+                () -> service.withdraw("999", new BigDecimal("5.00"))
+        );
+
+        //assert
+        assertEquals("Account not found", exception.getMessage());
         assertTrue(repository.findById("999").isEmpty());
     }
 }
