@@ -1,6 +1,7 @@
 package com.company.app.service;
 
 import com.company.app.domain.Account;
+import com.company.app.domain.TransferResult;
 import com.company.app.repository.AccountRepository;
 import org.springframework.stereotype.Service;
 
@@ -64,7 +65,7 @@ public class AccountService {
         return account;
     }
 
-    public synchronized Account transfer(String fromAccountId, String toAccountId, BigDecimal amount) {
+    public synchronized TransferResult transfer(String fromAccountId, String toAccountId, BigDecimal amount) {
         if (fromAccountId == null || fromAccountId.isBlank() || toAccountId == null || toAccountId.isBlank()) {
             throw new IllegalArgumentException("Account IDs must not be empty");
         }
@@ -89,6 +90,6 @@ public class AccountService {
         accountRepository.save(fromAccount);
         accountRepository.save(toAccount);
 
-        return fromAccount;
+        return new TransferResult(fromAccount, toAccount);
     }
 }

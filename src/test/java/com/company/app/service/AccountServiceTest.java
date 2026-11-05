@@ -1,6 +1,7 @@
 package com.company.app.service;
 
 import com.company.app.domain.Account;
+import com.company.app.domain.TransferResult;
 import com.company.app.repository.InMemoryAccountRepository;
 import org.junit.jupiter.api.Test;
 
@@ -145,13 +146,22 @@ class AccountServiceTest {
         service.deposit("456", new BigDecimal("50.00"));
 
         // Act
-        service.transfer("123", "456", new BigDecimal("30.00"));
+        TransferResult result = service.transfer(
+                "123", "456", new BigDecimal("30.00")
+        );
 
         // Assert
         Account fromAccount = repository.findById("123").orElseThrow();
         assertEquals(0, new BigDecimal("70.00").compareTo(fromAccount.getBalance()));
+
         Account toAccount = repository.findById("456").orElseThrow();
         assertEquals(0, new BigDecimal("80.00").compareTo(toAccount.getBalance()));
+
+        assertEquals("123", result.origin().getId());
+        assertEquals(0, new BigDecimal("70.00").compareTo(result.origin().getBalance()));
+
+        assertEquals("456", result.destination().getId());
+        assertEquals(0, new BigDecimal("80.00").compareTo(result.destination().getBalance()));
     }
 
     @Test
