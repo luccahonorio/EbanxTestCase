@@ -5,6 +5,7 @@ import com.company.app.repository.AccountRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 
 @Service
 public class AccountService {
@@ -30,5 +31,13 @@ public class AccountService {
         account.setBalance(account.getBalance().add(amount));
         accountRepository.save(account);
         return account;
+    }
+
+    public Optional<Account> getBalance(String accountId) {
+        if (accountId == null || accountId.isBlank()) {
+            throw new IllegalArgumentException("Account ID must not be empty");
+        }
+
+        return accountRepository.findById(accountId);
     }
 }
