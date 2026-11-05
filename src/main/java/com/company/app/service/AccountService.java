@@ -16,7 +16,7 @@ public class AccountService {
         this.accountRepository = accountRepository;
     }
 
-    public Account deposit(String accountId, BigDecimal amount) {
+    public synchronized Account deposit(String accountId, BigDecimal amount) {
 
         if (accountId == null || accountId.isBlank()) {
             throw new IllegalArgumentException("Account ID must not be empty");
@@ -34,7 +34,7 @@ public class AccountService {
         return account;
     }
 
-    public Optional<Account> getBalance(String accountId) {
+    public synchronized Optional<Account> getBalance(String accountId) {
         if (accountId == null || accountId.isBlank()) {
             throw new IllegalArgumentException("Account ID must not be empty");
         }
@@ -42,7 +42,7 @@ public class AccountService {
         return accountRepository.findById(accountId);
     }
 
-    public Account withdraw(String accountId, BigDecimal amount) {
+    public synchronized Account withdraw(String accountId, BigDecimal amount) {
         if (accountId == null || accountId.isBlank()) {
             throw new IllegalArgumentException("Account ID must not be empty");
         }
@@ -62,5 +62,33 @@ public class AccountService {
         accountRepository.save(account);
 
         return account;
+    }
+
+    public synchronized Account transfer(String fromAccountId, String toAccountId, BigDecimal amount) {
+        if (fromAccountId == null || fromAccountId.isBlank() || toAccountId == null || toAccountId.isBlank()) {
+            throw new IllegalArgumentException("Account IDs must not be empty");
+        }
+
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Amount must be positive");
+        }
+
+        Account fromAccount = accountRepository.findById(fromAccountId)
+                .orElseThrow(() -> new NoSuchElementException("Account not found"));
+
+        Account toAccount = accountRepository.findById(toAccountId)
+                .orElseGet(() -> new Account(toAccountId, BigDecimal.ZERO));
+
+        if (fromAccount.getBalance().compareTo(amount) < 0) {
+            throw new IllegalStateException("Insufficient funds");
+        }
+
+        fromAccount.setBalance(fromAccount.getBalance().subtract(amount));
+        toAccount.setBalance(toAccount.getBalance().add(amount));
+
+        accountRepository.save(fromAccount);
+        accountRepository.save(toAccount);
+
+        return fromAccount;
     }
 }

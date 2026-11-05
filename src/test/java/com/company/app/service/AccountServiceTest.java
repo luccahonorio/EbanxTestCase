@@ -131,8 +131,89 @@ class AccountServiceTest {
                 () -> service.withdraw("999", new BigDecimal("5.00"))
         );
 
-        //assert
+        // Assert
         assertEquals("Account not found", exception.getMessage());
         assertTrue(repository.findById("999").isEmpty());
+    }
+
+    @Test
+    void shouldTransferBetweenExistingAccounts() {
+        // Arrange
+        var repository = new InMemoryAccountRepository();
+        var service = new AccountService(repository);
+        service.deposit("123", new BigDecimal("100.00"));
+        service.deposit("456", new BigDecimal("50.00"));
+
+        // Act
+        service.transfer("123", "456", new BigDecimal("30.00"));
+
+        // Assert
+        Account fromAccount = repository.findById("123").orElseThrow();
+        assertEquals(0, new BigDecimal("70.00").compareTo(fromAccount.getBalance()));
+        Account toAccount = repository.findById("456").orElseThrow();
+        assertEquals(0, new BigDecimal("80.00").compareTo(toAccount.getBalance()));
+    }
+
+    @Test
+    void shouldCreateDestinationAccountWhenTransferringToNonExistingAccount(){
+        // Arrange
+        var repository = new InMemoryAccountRepository();
+        var service = new AccountService(repository);
+        service.deposit("123", new BigDecimal("100.00"));
+
+        // Act
+        service.transfer("123", "999", new BigDecimal("30.00"));
+
+        // Assert
+        Account fromAccount = repository.findById("123").orElseThrow();
+        assertEquals(0, new BigDecimal("70.00").compareTo(fromAccount.getBalance()));
+        Account toAccount = repository.findById("999").orElseThrow();
+        assertEquals(0, new BigDecimal("30.00").compareTo(toAccount.getBalance()));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTransferringMoreThanBalance() {
+        // Arrange
+        var repository = new InMemoryAccountRepository();
+        var service = new AccountService(repository);
+        service.deposit("123", new BigDecimal("100.00"));
+        service.deposit("456", new BigDecimal("50.00"));
+
+        // Act
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> service.transfer("123", "456", new BigDecimal("150.00"))
+        );
+
+        // Assert
+        assertEquals("Insufficient funds", exception.getMessage());
+
+        // Validate that balances remain unchanged
+        Account fromAccount = repository.findById("123").orElseThrow();
+        assertEquals(0, new BigDecimal("100.00").compareTo(fromAccount.getBalance()));
+        Account toAccount = repository.findById("456").orElseThrow();
+        assertEquals(0, new BigDecimal("50.00").compareTo(toAccount.getBalance()));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTransferringFromNonExistingAccount(){
+        // Arrange
+        var repository = new InMemoryAccountRepository();
+        var service = new AccountService(repository);
+        service.deposit("456", new BigDecimal("50.00"));
+
+        // Act
+        NoSuchElementException exception = assertThrows(
+                NoSuchElementException.class,
+                () -> service.transfer("999", "456", new BigDecimal("30.00"))
+        );
+
+        // Assert
+        assertEquals("Account not found", exception.getMessage());
+        assertTrue(repository.findById("999").isEmpty());
+
+        // validate that the destination account balance remains unchanged
+        Account destinationAccount = repository.findById("456").orElseThrow();
+        assertEquals(0, new BigDecimal("50.00").compareTo(destinationAccount.getBalance()));
     }
 }
