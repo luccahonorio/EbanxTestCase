@@ -92,4 +92,8 @@ public class AccountService {
 
         return new TransferResult(fromAccount, toAccount);
     }
+
+    public synchronized void reset() {
+        accountRepository.clear();
+    }
 }
