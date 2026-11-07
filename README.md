@@ -15,7 +15,7 @@ REST API developed in Java with Spring Boot to manage account balances and finan
 - Java 21+
 - Maven 3.9+
 
-## Running the application
+## Running the Application
 
 Clone the repository:
 
@@ -40,7 +40,7 @@ http://localhost:8080
 
 ### Reset
 
-Resets all accounts.
+Resets all accounts and clears the application state.
 
 **Request**
 
@@ -49,6 +49,10 @@ POST /reset
 ```
 
 **Response:** `200 OK`
+
+```text
+OK
+```
 
 ### Get Account Balance
 
@@ -62,7 +66,7 @@ GET /balance?account_id=100
 
 **Success response:** `200 OK`
 
-```json
+```text
 100
 ```
 
@@ -85,6 +89,10 @@ Content-Type: application/json
 
 #### Deposit
 
+Creates an account if it does not exist or adds the amount to an existing account.
+
+**Request body**
+
 ```json
 {
   "type": "deposit",
@@ -105,6 +113,12 @@ Content-Type: application/json
 ```
 
 #### Withdraw
+
+Withdraws an amount from an existing account.
+
+Assuming account `100` has an initial balance of `10`:
+
+**Request body**
 
 ```json
 {
@@ -127,6 +141,12 @@ Content-Type: application/json
 
 #### Transfer
 
+Transfers an amount from an existing origin account to a destination account. The destination account is created if it does not exist.
+
+Assuming account `100` has a balance of `10`:
+
+**Request body**
+
 ```json
 {
   "type": "transfer",
@@ -142,7 +162,7 @@ Content-Type: application/json
 {
   "origin": {
     "id": "100",
-    "balance": 0
+    "balance": 5
   },
   "destination": {
     "id": "200",
@@ -156,6 +176,7 @@ Content-Type: application/json
 - Deposits create an account if it does not exist.
 - Withdrawals require an existing account.
 - Transfers require an existing origin account and create the destination account if necessary.
+- Deposit, withdrawal, and transfer amounts must be greater than zero.
 - Accounts cannot have a negative balance.
 - Account balance queries do not create or modify accounts.
 - Reset clears all accounts.
@@ -169,12 +190,74 @@ Content-Type: application/json
 - **DTOs:** Request and response records separate the API contract from the domain model.
 - **Exception handling:** A centralized `@RestControllerAdvice` translates business exceptions into HTTP responses.
 
+## Project Structure
+
+The application follows a layered architecture:
+
+```text
+src/
+├── main/
+│   ├── java/com/company/app/
+│   │   ├── controller/       # HTTP endpoints
+│   │   ├── domain/           # Domain models and enums
+│   │   ├── dto/
+│   │   │   ├── request/      # Request DTOs
+│   │   │   └── response/     # Response DTOs
+│   │   ├── exception/        # Centralized exception handling
+│   │   ├── repository/       # Account storage
+│   │   └── service/          # Business logic
+│   └── resources/
+└── test/
+    └── java/com/company/app/
+        ├── controller/       # API integration tests
+        └── service/          # Business logic tests
+```
+
+## Error Handling
+
+The API uses appropriate HTTP status codes to represent unsuccessful operations:
+
+| Scenario | HTTP Status | Response |
+|---|---:|---|
+| Account not found | 404 | `0` |
+| Insufficient funds | 400 | `{"error":"Insufficient funds"}` |
+| Invalid amount (zero or negative) | 400 | Bad Request |
+
 ## Tests
 
-Run the complete test suite:
+The project includes unit tests for business logic and integration tests for REST API endpoints.
+
+### Running Tests
+
+Run the complete test suite using Maven:
 
 ```bash
 mvn clean test
 ```
 
-The tests cover business logic and API integration, including deposits, withdrawals, transfers, insufficient funds, missing accounts, balance queries, and account reset.
+To run tests without cleaning the previous build:
+
+```bash
+mvn test
+```
+
+### Test Coverage
+
+The test suite covers:
+
+- Account creation through deposits.
+- Multiple deposits into the same account.
+- Successful withdrawals.
+- Withdrawals with insufficient funds.
+- Withdrawals from non-existing accounts.
+- Withdrawals with zero or negative amounts.
+- Withdrawals of the exact available balance.
+- Transfers between existing accounts.
+- Transfers to non-existing destination accounts.
+- Transfers with insufficient funds.
+- Transfers from non-existing accounts.
+- Transfers with zero or negative amounts.
+- Balance inquiries for existing and non-existing accounts.
+- Verification that invalid operations do not modify account balances.
+- Account reset.
+- API integration and business logic validation.

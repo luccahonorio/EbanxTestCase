@@ -8,7 +8,9 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.util.NoSuchElementException;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class AccountServiceTest {
     @Test
@@ -225,5 +227,94 @@ class AccountServiceTest {
         // validate that the destination account balance remains unchanged
         Account destinationAccount = repository.findById("456").orElseThrow();
         assertEquals(0, new BigDecimal("50.00").compareTo(destinationAccount.getBalance()));
+    }
+
+    @Test
+    void shouldRejectWithdrawWithZeroAmount() {
+        // Arrange
+        var repository = new InMemoryAccountRepository();
+        var service = new AccountService(repository);
+        service.deposit("100", new BigDecimal("100"));
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () ->
+                service.withdraw("100", BigDecimal.ZERO)
+        );
+
+        // Validate that balance remains unchanged
+        Account account = repository.findById("100").orElseThrow();
+        assertEquals(0, new BigDecimal("100").compareTo(account.getBalance()));
+    }
+
+    @Test
+    void shouldRejectWithdrawWithNegativeAmount() {
+        // Arrange
+        var repository = new InMemoryAccountRepository();
+        var service = new AccountService(repository);
+        service.deposit("100", new BigDecimal("100"));
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () ->
+                service.withdraw("100", new BigDecimal("-10"))
+        );
+
+        // Validate that balance remains unchanged
+        Account account = repository.findById("100").orElseThrow();
+        assertEquals(0, new BigDecimal("100").compareTo(account.getBalance()));
+    }
+
+    @Test
+    void shouldRejectTransferWithZeroAmount() {
+        // Arrange
+        var repository = new InMemoryAccountRepository();
+        var service = new AccountService(repository);
+        service.deposit("100", new BigDecimal("100"));
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () ->
+                service.transfer("100", "200", BigDecimal.ZERO)
+        );
+
+        // Validate that balances remain unchanged
+        Account origin = repository.findById("100").orElseThrow();
+        assertEquals(0, new BigDecimal("100").compareTo(origin.getBalance()));
+        assertTrue(repository.findById("200").isEmpty());
+    }
+
+    @Test
+    void shouldRejectTransferWithNegativeAmount() {
+        // Arrange
+        var repository = new InMemoryAccountRepository();
+        var service = new AccountService(repository);
+        service.deposit("100", new BigDecimal("100"));
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () ->
+                service.transfer("100", "200", new BigDecimal("-10"))
+        );
+
+        // Validate that balances remain unchanged
+        Account origin = repository.findById("100").orElseThrow();
+        assertEquals(0, new BigDecimal("100").compareTo(origin.getBalance()));
+        assertTrue(repository.findById("200").isEmpty());
+    }
+
+    @Test
+    void shouldWithdrawExactBalance() {
+        // Arrange
+        var repository = new InMemoryAccountRepository();
+        var service = new AccountService(repository);
+        service.deposit("100", new BigDecimal("100"));
+
+        // Act
+        Account account = service.withdraw("100", new BigDecimal("100"));
+
+        // Assert
+        assertEquals("100", account.getId());
+        assertEquals(0, BigDecimal.ZERO.compareTo(account.getBalance()));
+
+        // Validate actual repository state
+        Account storedAccount = repository.findById("100").orElseThrow();
+        assertEquals(0, BigDecimal.ZERO.compareTo(storedAccount.getBalance()));
     }
 }
