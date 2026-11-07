@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -36,7 +37,8 @@ public class ResetControllerTest {
         accountRepository.save(new Account("200", new BigDecimal("300")));
 
         mockMvc.perform(post("/reset"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(content().string("OK"));
 
         assertTrue(accountRepository.findById("100").isEmpty());
         assertTrue(accountRepository.findById("200").isEmpty());
